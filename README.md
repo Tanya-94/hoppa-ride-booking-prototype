@@ -1,6 +1,6 @@
 # Hoppa ride booking prototype
 
-**Live demo:** https://tanya-94.github.io/ride-booking-prototype/
+**Live demo:** https://tanya-94.github.io/hoppa-ride-booking-prototype/
 
 > This is a prototype for demonstration purposes only. It is not a real booking service: nothing is booked, charged or sent.
 
