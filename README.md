@@ -1,4 +1,8 @@
-# proto v2: ride selection redesign (React, mobile)
+# Ride booking concept prototype (React, mobile)
+
+**Live prototype:** https://tanya-94.github.io/ride-booking-prototype/
+
+Deployed to GitHub Pages by `.github/workflows/deploy.yml` on every push to `main`.
 
 Copy of proto v1 with: one vehicle image per ride type, and ride details plus terms on Travel details. (A map was tried and removed; parked for later.)
 
