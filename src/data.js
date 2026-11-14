@@ -3,7 +3,9 @@
    - suitcase capacity = hoppa's luggage "Max." (it always equals the passenger Max.)
    - private vehicles are priced per vehicle; shuttles per seat, with one suitcase per seat
    - refund protection is about 11% of the ride (matches £0.73, £7.10, £10.31, £11.83 seen live)
-   - waiting and cancellation wording comes from hoppa's "More Info" sheet and Terms & Conditions */
+   - waiting and cancellation wording comes from hoppa's "More Info" sheet and Terms & Conditions
+   - stop counts are assumed (hoppa's live results don't list them): Shuttle up to 6 hotel stops, Speedy shuttle up to 3;
+     every private vehicle goes direct with no stops */
 
 const RAW = [
   ['shared', 'Shuttle', '', 1, 90, 6.66, 7.83],
@@ -43,8 +45,10 @@ const RAW = [
   ['coach', 'Coach', 'Prevost motorcoach or similar', 55, 43, 934.22, 1099.08],
 ]
 
+const STOPS = { Shuttle: 6, 'Speedy shuttle': 3 }
+
 export const RIDES = RAW.map(([type, name, model, cap, mins, price, was], id) => ({
-  id, type, name, model, cap, mins, price, was,
+  id, type, name, model, cap, mins, price, was, stops: STOPS[name] || 0,
   cls: /Executive/.test(name) ? 'Executive' : /Luxury/.test(name) ? 'Luxury' : 'Standard',
 }))
 
@@ -77,6 +81,13 @@ export const etaRange = (rides) => {
   const ms = rides.map((r) => r.mins)
   const lo = Math.min(...ms), hi = Math.max(...ms)
   return lo === hi ? `Est. journey ${lo} min` : `Est. journey ${lo}–${hi} min`
+}
+/* Stops, said the same way on every page. */
+export const stopsText = (r) => (r.stops ? `Up to ${r.stops} stops` : 'Direct, no stops')
+export const stopsRange = (rides) => {
+  const s = rides.map((r) => r.stops)
+  const lo = Math.min(...s), hi = Math.max(...s)
+  return !hi ? 'Direct, no stops' : lo === hi ? `Up to ${hi} stops` : `Up to ${lo}–${hi} stops`
 }
 export const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
 export const pax = (g) => g.adults + g.youths + g.seniors
@@ -113,12 +124,12 @@ export const subtitle = (r) =>
 /* Journey facts, all from hoppa's More Info sheet and terms. */
 export function facts(r) {
   if (r.type === 'shared') return [
-    { icon: 'route', text: r.mins > 60 ? `Stops at other hotels · ${eta(r.mins)}` : `Fewer stops · ${eta(r.mins)}` },
+    { icon: 'route', text: `Up to ${r.stops} stops at other hotels · ${eta(r.mins)}` },
     { icon: 'clock', text: 'Leaves up to 60 min after you meet the driver', warn: true },
     { icon: 'shield', text: 'Free cancellation until 48 h before pickup' },
   ]
   return [
-    { icon: 'route', text: `Direct to your hotel · ${eta(r.mins)}` },
+    { icon: 'route', text: `Direct to your hotel, no stops · ${eta(r.mins)}` },
     { icon: 'clock', text: 'Driver waits up to 60 min free after you land' },
     { icon: 'shield', text: 'Free cancellation until 48 h before pickup' },
   ]
@@ -156,24 +167,43 @@ export function typeSummary(g) {
   }).sort((a, b) => (!!b.fit.length - !!a.fit.length) || a.from - b.from)
 }
 
-/* Inside a type: one row per class + size. The cheapest offer leads; same-size offers fold behind it,
-   so the traveller never sees "Minibus · Max. 10" twice. */
-export function offerGroups(type, g) {
-  const map = new Map()
-  RIDES.filter((r) => r.type === type).forEach((r) => {
-    const k = `${r.cls}|${r.type === 'shared' ? r.name : r.cap}`
-    if (!map.has(k)) map.set(k, [])
-    map.get(k).push(r)
+/* Inside a type: one row per class + size, and bigger always costs more.
+   hoppa lists some smaller vehicles above the price of bigger ones in the same class (e.g. Executive car:
+   4 people £94.64, but a named-model 3-seater £107.56). Those offers are "dominated": a same-class vehicle
+   with at least as many seats costs less. They fold behind that cheaper, roomier row instead of getting
+   their own, so prices only go up as the vehicle gets bigger. */
+export function offerGroups(type, g, sort = 'recommended') {
+  const all = RIDES.filter((r) => r.type === type)
+  const key = (r) => `${r.cls}|${r.type === 'shared' ? r.name : ''}`
+  const leads = all.filter((r) => !all.some((o) => o.id !== r.id && key(o) === key(r) && o.cap >= r.cap &&
+    (o.price < r.price || (o.price === r.price && (o.cap > r.cap || o.id < r.id)))))
+  const rows = leads.map((lead) => ({ lead, more: [], ok: fits(lead, g) }))
+  all.filter((r) => !leads.includes(r)).forEach((r) => {
+    const home = rows.filter((x) => key(x.lead) === key(r) && x.lead.cap >= r.cap).sort((a, b) => a.lead.cap - b.lead.cap)[0]
+    if (fits(r, g)) home.more.push(r)
   })
-  const rows = [...map.values()].map((offers) => {
-    offers.sort((a, b) => a.price - b.price)
-    return { lead: offers[0], more: offers.slice(1), ok: fits(offers[0], g) }
-  })
-  rows.sort((a, b) => (b.ok - a.ok) || a.lead.cap - b.lead.cap || a.lead.price - b.lead.price)
-  const classes = [...new Set(rows.map((r) => r.lead.cls))]
+  rows.forEach((x) => x.more.sort((a, b) => a.price - b.price))
+  const cmp = {
+    recommended: (a, b) => a.lead.cap - b.lead.cap || a.lead.price - b.lead.price,
+    low: (a, b) => a.lead.price - b.lead.price,
+    high: (a, b) => b.lead.price - a.lead.price,
+    fast: (a, b) => a.lead.mins - b.lead.mins || a.lead.price - b.lead.price,
+    room: (a, b) => b.lead.cap - a.lead.cap || a.lead.price - b.lead.price,
+  }[sort]
+  rows.sort((a, b) => (b.ok - a.ok) || cmp(a, b))
+  if (sort !== 'recommended') return [{ cls: null, rows }]
   const order = ['Standard', 'Executive', 'Luxury']
+  const classes = [...new Set(rows.map((r) => r.lead.cls))]
   return classes.sort((a, b) => order.indexOf(a) - order.indexOf(b)).map((cls) => ({ cls, rows: rows.filter((r) => r.lead.cls === cls) }))
 }
+
+export const SORTS = [
+  { key: 'recommended', label: 'Recommended' },
+  { key: 'low', label: 'Lowest price' },
+  { key: 'high', label: 'Highest price' },
+  { key: 'fast', label: 'Fastest' },
+  { key: 'room', label: 'Most room' },
+]
 
 /* The smallest vehicle that fits, for the live preview on the search screen. */
 export function smallestFit(g) {

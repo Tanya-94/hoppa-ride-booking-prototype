@@ -3,7 +3,7 @@ import { Icon } from './ui.jsx'
 import VehicleArt, { TYPE_ART } from './VehicleArt.jsx'
 import {
   TRIP, TYPES, RIDES, money, eta, etaRange, plural, pax, who, fits, whyNot, priceOf, wasOf, bagsCap, subtitle, facts,
-  picks, typeSummary, offerGroups, fitting,
+  picks, typeSummary, offerGroups, fitting, SORTS, stopsText, stopsRange,
 } from '../data.js'
 
 export function TripBar({ group, onEdit, onBack }) {
@@ -37,7 +37,7 @@ function FitLine({ r, g, always }) {
   return <span className="fit fit-no"><Icon name="warn" size={14} stroke={2} />{whyNot(r, g)}</span>
 }
 
-const route = (r) => (r.type === 'shared' ? `Shared · stops on the way · ${eta(r.mins)}` : `Direct · ${eta(r.mins)}`)
+const route = (r) => (r.type === 'shared' ? `Shared · up to ${r.stops} stops · ${eta(r.mins)}` : `Direct, no stops · ${eta(r.mins)}`)
 
 /* One row style for every list of rides. The selected row gets a heavy outline and opens its facts. */
 function RideRow({ r, g, title, sub, label, selected, onSelect, hideCap, noArt }) {
@@ -118,12 +118,14 @@ function TypeList({ g, onOpen }) {
   )
 }
 
-function OfferRow({ row, g, selected, onSelect }) {
+function OfferRow({ row, g, selected, onSelect, showCls }) {
   const [open, setOpen] = useState(false)
   const r = row.lead
   const shared = r.type === 'shared'
   const title = shared ? r.name : `Up to ${r.cap} people`
-  const sub = shared ? (r.mins > 60 ? 'Stops at other hotels on the way' : 'Fewer stops, quicker') : `${plural(r.cap, 'suitcase', 'suitcases')}${r.model ? ` · ${r.model}` : ''}`
+  const sub = shared
+    ? `${stopsText(r)} at other hotels · ${eta(r.mins)}`
+    : [showCls && r.cls, plural(r.cap, 'suitcase', 'suitcases'), r.model].filter(Boolean).join(' · ')
   return (
     <div className="offer">
       <RideRow r={r} g={g} title={title} sub={sub} hideCap={!shared} noArt selected={selected === r.id} onSelect={onSelect} />
@@ -134,10 +136,10 @@ function OfferRow({ row, g, selected, onSelect }) {
             <Icon name="down" size={16} className="fold-chev" />
           </button>
           <div className="fold-body"><div>
-            <p className="fold-note">Same seats and suitcases. The listing names a model, but nothing on hoppa explains the higher price.</p>
+            <p className="fold-note">Same class, no more room, but a higher price. The listing names a model; nothing on hoppa explains the difference.</p>
             {row.more.map((m) => (
               <button key={m.id} type="button" className={`mini ${selected === m.id ? 'is-selected' : ''}`} aria-pressed={selected === m.id} onClick={() => onSelect(m.id)}>
-                <span>{m.model || subtitle(m)}</span><strong>{money(priceOf(m, g))}</strong>
+                <span>{m.model || subtitle(m)}{m.cap !== r.cap && <small> · up to {m.cap} people</small>}</span><strong>{money(priceOf(m, g))}</strong>
               </button>
             ))}
           </div></div>
@@ -150,7 +152,8 @@ function OfferRow({ row, g, selected, onSelect }) {
 function TypeView({ type, g, selected, onSelect, onType, onEdit }) {
   const sum = typeSummary(g)
   const t = sum.find((x) => x.type === type)
-  const groups = offerGroups(type, g)
+  const [sort, setSort] = useState('recommended')
+  const groups = offerGroups(type, g, sort)
   const none = !t.fit.length
   const nearest = fitting(g).find((r) => r.type !== 'shared')
   const chipsRef = useRef(null)
@@ -177,6 +180,7 @@ function TypeView({ type, g, selected, onSelect, onType, onEdit }) {
         <div className="type-hero-facts">
           <span>{plural(t.rides.length, 'ride', 'rides')} · {t.type === 'shared' ? 'priced per seat' : t.lo === t.hi ? `up to ${t.hi} people` : `${t.lo}–${t.hi} people`} · from {money(t.from)}</span>
           <span className="type-hero-eta"><Icon name="clock" size={14} />{etaRange(t.rides)}</span>
+          <span className="type-hero-eta"><Icon name="route" size={14} />{stopsRange(t.rides)}</span>
         </div>
       </div>
       {none && (
@@ -190,9 +194,20 @@ function TypeView({ type, g, selected, onSelect, onType, onEdit }) {
           </div>
         </div>
       )}
+      {!none && (
+        <div className="sortbar">
+          <label htmlFor="sort">Sort by</label>
+          <span className="sort-select">
+            <select id="sort" value={sort} onChange={(e) => setSort(e.target.value)}>
+              {SORTS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+            </select>
+            <Icon name="down" size={16} />
+          </span>
+        </div>
+      )}
       {groups.map((grp) => (
-        <div key={grp.cls} className="section">
-          {groups.length > 1 && (
+        <div key={grp.cls || sort} className="section">
+          {grp.cls && groups.length > 1 && (
             <h2 className="section-title section-title-art">
               <VehicleArt ride={{ type, cls: grp.cls }} width={64} />{grp.cls}
             </h2>
@@ -200,7 +215,7 @@ function TypeView({ type, g, selected, onSelect, onType, onEdit }) {
           <div className="rides">
             {grp.rows.map((row, i) => (
               <div key={row.lead.id} className="stagger" style={{ '--d': `${i * 35}ms` }}>
-                <OfferRow row={row} g={g} selected={selected} onSelect={onSelect} />
+                <OfferRow row={row} g={g} selected={selected} onSelect={onSelect} showCls={!grp.cls && groups[0].rows.some((x) => x.lead.cls !== 'Standard')} />
               </div>
             ))}
           </div>

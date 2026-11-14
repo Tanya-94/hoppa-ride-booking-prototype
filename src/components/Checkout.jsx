@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { Icon, Stepper } from './ui.jsx'
 import VehicleArt from './VehicleArt.jsx'
 import { RideFacts, RideTerms } from './RideInfo.jsx'
-import { TRIP, EXTRAS, eta, money, plural, pax, priceOf, wasOf, refundOf, subtitle, bagsCap } from '../data.js'
+import { TRIP, EXTRAS, eta, stopsText, money, plural, pax, priceOf, wasOf, refundOf, subtitle, bagsCap } from '../data.js'
 
 export function totals(r, g, form) {
   const ride = priceOf(r, g)
@@ -24,7 +24,7 @@ function TripSummary({ r, g, onChangeRide }) {
       </div>
       <ol className="journey">
         <li><span className="dot" /><div><strong>{TRIP.from}</strong><span>{TRIP.date} · meet your driver after landing, {TRIP.lands}</span></div></li>
-        <li><span className="dot dot-end" /><div><strong>{TRIP.to}</strong><span>{r.type === 'shared' ? 'Shared, with stops' : 'Direct'} · {eta(r.mins)}</span></div></li>
+        <li><span className="dot dot-end" /><div><strong>{TRIP.to}</strong><span>{r.type === 'shared' ? `Shared · ${stopsText(r).toLowerCase()}` : 'Direct, no stops'} · {eta(r.mins)}</span></div></li>
       </ol>
     </section>
   )
@@ -98,6 +98,7 @@ export function Details({ r, g, form, setForm, onBack, onContinue, onChangeRide 
   }
   const nameRef = useRef(null)
   const emailRef = useRef(null)
+  const phoneRef = useRef(null)
   const set = (k) => (v) => { setForm((f) => ({ ...f, [k]: v })); if (errors[k]) setErrors((e) => ({ ...e, [k]: undefined })) }
   const extras = EXTRAS[r.id] || []
   const errCount = Object.values(errors).filter(Boolean).length
@@ -108,8 +109,9 @@ export function Details({ r, g, form, setForm, onBack, onContinue, onChangeRide 
     const er = {}
     if (!form.name.trim()) er.name = 'Add the lead passenger’s name. The driver will look for it.'
     if (!/^\S+@\S+\.\S+$/.test(form.email)) er.email = 'Add an email so we can send your booking and driver details.'
+    if (form.phone.replace(/\D/g, '').length < 7) er.phone = 'Add a mobile number so the driver can call you on arrival.'
     setErrors(er)
-    if (Object.keys(er).length) { setShake((s) => s + 1); (er.name ? nameRef : emailRef).current?.focus(); return }
+    if (Object.keys(er).length) { setShake((s) => s + 1); (er.name ? nameRef : er.email ? emailRef : phoneRef).current?.focus(); return }
     onContinue()
   }
 
@@ -121,7 +123,7 @@ export function Details({ r, g, form, setForm, onBack, onContinue, onChangeRide 
         {errCount > 0 && (
           <div className="error-summary shake" key={shake} role="alert">
             <Icon name="warn" size={18} />
-            <div><strong>{errCount > 1 ? 'Two quick things before payment' : 'One quick thing before payment'}</strong>
+            <div><strong>{errCount > 2 ? 'Three quick things before payment' : errCount > 1 ? 'Two quick things before payment' : 'One quick thing before payment'}</strong>
               <ul>{Object.entries(errors).filter(([, v]) => v).map(([k, v]) => <li key={k}>{v}</li>)}</ul>
             </div>
           </div>
@@ -136,7 +138,7 @@ export function Details({ r, g, form, setForm, onBack, onContinue, onChangeRide 
           <div className="field-stack">
             <Field label="Full name" value={form.name} onChange={set('name')} error={errors.name} autoComplete="name" inputRef={nameRef} />
             <Field label="Email" type="email" value={form.email} onChange={(v) => { set('email')(v); setEmailed('') }} error={errors.email} autoComplete="email" inputRef={emailRef} />
-            <Field label="Mobile (optional)" type="tel" value={form.phone} onChange={set('phone')} autoComplete="tel" prefix="+44" />
+            <Field label="Mobile" type="tel" value={form.phone} onChange={set('phone')} error={errors.phone} autoComplete="tel" prefix="+44" inputRef={phoneRef} />
           </div>
           <p className="help">We send your booking and the driver’s details here, so they can reach you on arrival.</p>
           {emailed ? (

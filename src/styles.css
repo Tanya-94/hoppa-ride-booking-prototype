@@ -389,3 +389,14 @@ input { font: inherit; color: inherit; }
 /* Discount line in Price details */
 .lines .discount dt, .lines .discount dd { color: var(--ok); font-weight: 600; }
 .saved-note { font-size: 13px; font-weight: 600; color: var(--ok); }
+
+/* Sort, inside a ride type. A native select: the phone's own picker, no custom menu to learn. */
+.sortbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 20px; }
+.sortbar label { font-size: 14px; color: var(--muted); font-weight: 500; }
+.sort-select { position: relative; display: inline-flex; align-items: center; }
+.sort-select select { appearance: none; font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--fill);
+  border: 0; border-radius: var(--r-control); padding: 8px 34px 8px 12px; cursor: pointer; }
+.sort-select select:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.sort-select svg { position: absolute; right: 10px; pointer-events: none; color: var(--ink); }
+.sortbar + .section { margin-top: 12px; }
+.mini small { font-size: 12px; color: var(--muted); font-weight: 400; }

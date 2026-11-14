@@ -20,10 +20,13 @@ Open the live demo on a phone (on a laptop it shows inside a phone frame), then:
 - Loading state
 - Recommended rides: best value, more room, premium
 - Ride types with one row per size and other offers folded away
+- Prices always go up with vehicle size (pricier smaller offers are folded)
+- Sort within a ride type: recommended, lowest or highest price, fastest, most room
+- Number of stops on shuttles; private rides marked direct, no stops
 - Rides that don't fit stay visible with the reason
 - No vehicle fits empty state
 - Travel details with ride facts, terms and price breakdown with discount
-- Form validation and error states
+- Form validation and error states (name, email and mobile required)
 - Email me the ride details
 - Optional refund protection
 - Payment method choice
