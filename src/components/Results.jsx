@@ -37,7 +37,7 @@ function FitLine({ r, g, always }) {
   return <span className="fit fit-no"><Icon name="warn" size={14} stroke={2} />{whyNot(r, g)}</span>
 }
 
-const route = (r) => (r.type === 'shared' ? `Shared · up to ${r.stops} stops · ${eta(r.mins)}` : `Direct, no stops · ${eta(r.mins)}`)
+const route = (r) => (r.type === 'shared' ? `Shared · ${r.stops} stops · ${eta(r.mins)}` : `Direct, no stops · ${eta(r.mins)}`)
 
 /* One row style for every list of rides. The selected row gets a heavy outline and opens its facts. */
 function RideRow({ r, g, title, sub, label, selected, onSelect, hideCap, noArt }) {

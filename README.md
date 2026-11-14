@@ -22,7 +22,7 @@ Open the live demo on a phone (on a laptop it shows inside a phone frame), then:
 - Ride types with one row per size and other offers folded away
 - Prices always go up with vehicle size (pricier smaller offers are folded)
 - Sort within a ride type: recommended, lowest or highest price, fastest, most room
-- Number of stops on shuttles; private rides marked direct, no stops
+- Number of stops on shuttles (3 or 8); private rides marked direct, no stops
 - Rides that don't fit stay visible with the reason
 - No vehicle fits empty state
 - Travel details with ride facts, terms and price breakdown with discount

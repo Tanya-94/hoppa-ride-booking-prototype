@@ -4,7 +4,7 @@
    - private vehicles are priced per vehicle; shuttles per seat, with one suitcase per seat
    - refund protection is about 11% of the ride (matches £0.73, £7.10, £10.31, £11.83 seen live)
    - waiting and cancellation wording comes from hoppa's "More Info" sheet and Terms & Conditions
-   - stop counts are assumed (hoppa's live results don't list them): Shuttle up to 6 hotel stops, Speedy shuttle up to 3;
+   - stop counts are assumed (hoppa's live results don't list them): Shuttle 8 hotel stops, Speedy shuttle 3;
      every private vehicle goes direct with no stops */
 
 const RAW = [
@@ -45,7 +45,7 @@ const RAW = [
   ['coach', 'Coach', 'Prevost motorcoach or similar', 55, 43, 934.22, 1099.08],
 ]
 
-const STOPS = { Shuttle: 6, 'Speedy shuttle': 3 }
+const STOPS = { Shuttle: 8, 'Speedy shuttle': 3 }
 
 export const RIDES = RAW.map(([type, name, model, cap, mins, price, was], id) => ({
   id, type, name, model, cap, mins, price, was, stops: STOPS[name] || 0,
@@ -83,11 +83,11 @@ export const etaRange = (rides) => {
   return lo === hi ? `Est. journey ${lo} min` : `Est. journey ${lo}–${hi} min`
 }
 /* Stops, said the same way on every page. */
-export const stopsText = (r) => (r.stops ? `Up to ${r.stops} stops` : 'Direct, no stops')
+export const stopsText = (r) => (r.stops ? `${r.stops} stops` : 'Direct, no stops')
 export const stopsRange = (rides) => {
   const s = rides.map((r) => r.stops)
   const lo = Math.min(...s), hi = Math.max(...s)
-  return !hi ? 'Direct, no stops' : lo === hi ? `Up to ${hi} stops` : `Up to ${lo}–${hi} stops`
+  return !hi ? 'Direct, no stops' : lo === hi ? `${hi} stops` : `${lo}–${hi} stops`
 }
 export const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
 export const pax = (g) => g.adults + g.youths + g.seniors
@@ -124,7 +124,7 @@ export const subtitle = (r) =>
 /* Journey facts, all from hoppa's More Info sheet and terms. */
 export function facts(r) {
   if (r.type === 'shared') return [
-    { icon: 'route', text: `Up to ${r.stops} stops at other hotels · ${eta(r.mins)}` },
+    { icon: 'route', text: `${r.stops} stops at other hotels · ${eta(r.mins)}` },
     { icon: 'clock', text: 'Leaves up to 60 min after you meet the driver', warn: true },
     { icon: 'shield', text: 'Free cancellation until 48 h before pickup' },
   ]
