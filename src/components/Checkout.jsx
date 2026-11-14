@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { Icon, Stepper } from './ui.jsx'
 import VehicleArt from './VehicleArt.jsx'
 import { RideFacts, RideTerms } from './RideInfo.jsx'
-import { TRIP, EXTRAS, eta, stopsText, money, plural, pax, priceOf, wasOf, refundOf, subtitle, bagsCap } from '../data.js'
+import { TRIP, EXTRAS, SPECIAL, fits, whyNot, eta, stopsText, money, plural, pax, priceOf, wasOf, refundOf, subtitle, bagsCap } from '../data.js'
 
 export function totals(r, g, form) {
   const ride = priceOf(r, g)
@@ -83,7 +83,45 @@ function Top({ back, onBack, step, title }) {
   )
 }
 
-export function Details({ r, g, form, setForm, onBack, onContinue, onChangeRide }) {
+/* Luggage, editable right before payment. The price is per vehicle, so it doesn't change;
+   if the bags no longer fit, say so here and offer a bigger ride instead of failing later. */
+function Luggage({ r, g, setGroup, onChangeRide, error }) {
+  const ok = fits(r, g)
+  const toggle = (x) => setGroup((s) => ({ ...s, special: s.special.includes(x) ? s.special.filter((y) => y !== x) : [...s.special, x] }))
+  return (
+    <section className="block" id="luggage">
+      <h2 className="block-title">Luggage</h2>
+      <Stepper label="Suitcases" hint={`This ride takes up to ${bagsCap(r, g)}`} value={g.bags} max={60}
+        onChange={(v) => setGroup((s) => ({ ...s, bags: v }))} />
+      <div className="special">
+        <span className="special-label">Anything bigger?</span>
+        <div className="tags" role="group" aria-label="Bigger items">
+          {SPECIAL.map((x) => {
+            const on = g.special.includes(x)
+            return (
+              <button type="button" key={x} className={`tag ${on ? 'is-on' : ''}`} aria-pressed={on} onClick={() => toggle(x)}>
+                {on && <Icon name="check" size={14} className="draw" />}{x}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+      {ok ? (
+        <p className="inline-note"><Icon name="check" size={16} />Fits this ride. The price stays the same.{g.special.length > 0 && ' We’ll pass the bigger items on to the provider to confirm.'}</p>
+      ) : (
+        <div className={`notice swap-in ${error ? 'shake' : ''}`} role="status" key={error}>
+          <strong>Your luggage doesn’t fit this {r.name.toLowerCase()}</strong>
+          <p>{whyNot(r, g)}. Remove a bag, or choose a bigger ride.</p>
+          <div className="notice-actions">
+            <button type="button" className="btn btn-dark btn-sm" onClick={onChangeRide}>Choose a bigger ride</button>
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
+
+export function Details({ r, g, setGroup, form, setForm, onBack, onContinue, onChangeRide }) {
   const [errors, setErrors] = useState({})
   const [shake, setShake] = useState(0)
   const [emailed, setEmailed] = useState('')
@@ -110,8 +148,11 @@ export function Details({ r, g, form, setForm, onBack, onContinue, onChangeRide 
     if (!form.name.trim()) er.name = 'Add the lead passenger’s name. The driver will look for it.'
     if (!/^\S+@\S+\.\S+$/.test(form.email)) er.email = 'Add an email so we can send your booking and driver details.'
     if (form.phone.replace(/\D/g, '').length < 7) er.phone = 'Add a mobile number so the driver can call you on arrival.'
+    if (!fits(r, g)) er.bags = 'Your luggage doesn’t fit this ride. Remove a bag or choose a bigger ride.'
     setErrors(er)
-    if (Object.keys(er).length) { setShake((s) => s + 1); (er.name ? nameRef : er.email ? emailRef : phoneRef).current?.focus(); return }
+    if (Object.keys(er).length) { setShake((s) => s + 1); if (er.name || er.email || er.phone) (er.name ? nameRef : er.email ? emailRef : phoneRef).current?.focus()
+      else document.getElementById('luggage')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return }
     onContinue()
   }
 
@@ -123,7 +164,7 @@ export function Details({ r, g, form, setForm, onBack, onContinue, onChangeRide 
         {errCount > 0 && (
           <div className="error-summary shake" key={shake} role="alert">
             <Icon name="warn" size={18} />
-            <div><strong>{errCount > 2 ? 'Three quick things before payment' : errCount > 1 ? 'Two quick things before payment' : 'One quick thing before payment'}</strong>
+            <div><strong>{errCount > 3 ? 'A few quick things before payment' : errCount > 2 ? 'Three quick things before payment' : errCount > 1 ? 'Two quick things before payment' : 'One quick thing before payment'}</strong>
               <ul>{Object.entries(errors).filter(([, v]) => v).map(([k, v]) => <li key={k}>{v}</li>)}</ul>
             </div>
           </div>
@@ -132,6 +173,8 @@ export function Details({ r, g, form, setForm, onBack, onContinue, onChangeRide 
           <h2 className="block-title">Your ride</h2>
           <RideFacts r={r} />
         </section>
+
+        <Luggage r={r} g={g} setGroup={(fn) => { setGroup(fn); setErrors((e) => ({ ...e, bags: undefined })) }} onChangeRide={onChangeRide} error={errors.bags ? shake : 0} />
 
         <section className="block">
           <h2 className="block-title">Lead passenger</h2>

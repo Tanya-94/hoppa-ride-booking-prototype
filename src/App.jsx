@@ -75,7 +75,7 @@ export default function App() {
             onBook={() => setStep('details')} />
         )}
         {step === 'details' && r && (
-          <Details r={r} g={group} form={form} setForm={setForm} onBack={() => setStep('results')}
+          <Details r={r} g={group} setGroup={setGroup} form={form} setForm={setForm} onBack={() => setStep('results')}
             onChangeRide={() => setStep('results')} onContinue={() => setStep('pay')} />
         )}
         {step === 'pay' && r && <Payment r={r} g={group} form={form} setForm={setForm} onBack={() => setStep('details')} onPay={() => setStep('done')} />}

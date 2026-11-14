@@ -26,6 +26,7 @@ Open the live demo on a phone (on a laptop it shows inside a phone frame), then:
 - Rides that don't fit stay visible with the reason
 - No vehicle fits empty state
 - Travel details with ride facts, terms and price breakdown with discount
+- Edit luggage (add or remove suitcases and bigger items) in Travel details, with a warning if it no longer fits
 - Form validation and error states (name, email and mobile required)
 - Email me the ride details
 - Optional refund protection
