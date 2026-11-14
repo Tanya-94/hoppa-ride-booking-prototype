@@ -1,4 +1,4 @@
-# Ride booking prototype
+# Hoppa ride booking prototype
 
 **Live demo:** https://tanya-94.github.io/ride-booking-prototype/
 
